@@ -1,0 +1,41 @@
+linters-settings:
+  misspell:
+    locale: US
+  gofmt:
+    # simplify code: gofmt with `-s` option, true by default
+    simplify: true
+  unused:
+    # Select the Go version to target. The default is '1.13'.
+    go: "1.17"
+  revive:
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: indent-error-flow
+        severity: warning
+      - name: add-constant
+        severity: warning
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: '""'
+            allowInts: "0,1,2"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2."
+# all linters see: https://golangci-lint.run/usage/linters/
+linters:
+  disable-all: true
+  enable:
+    - revive
+    - goimports
+    - misspell
+    - gofmt
+    - unused
+    - typecheck
+    - govet
+    - ineffassign
+    - gosimple
+    - deadcode
+    - structcheck
+    - errcheck
+service:
+  golangci-lint-version: 1.43.0 # use the fixed version to not introduce new linters unexpectedly

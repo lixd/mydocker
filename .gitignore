@@ -1,15 +1,20 @@
 # Binaries for programs and plugins
 *.exe
-*.exe~
+*.exe~ip2region.db
 *.dll
 *.so
 *.dylib
 
-# Test binary, built with `go test -c`
+# Test binary, build with `go test -c`
 *.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
+*.log
+.idea
+go.sum
+/wbl/
+# ip2geo 数据库
+*.mmdb
+# ip2region 数据库
+*.db
