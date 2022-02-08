@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"syscall"
+
+	"mydocker/constant"
 
 	"github.com/urfave/cli"
 )
@@ -74,20 +75,20 @@ func cgroups() {
 		// 得到 fork 出来的进程在外部namespace 的 pid
 		fmt.Println("fork 进程 PID：", cmd.Process.Pid)
 		// 在默认的 memory cgroup 下创建子目录，即创建一个子 cgroup
-		err := os.Mkdir(filepath.Join(cgroupMemoryHierarchyMount, "testmemorylimit"), 0755)
+		err := os.Mkdir(filepath.Join(cgroupMemoryHierarchyMount, "testmemorylimit"), constant.Perm0755)
 		if err != nil {
 			fmt.Println(err)
 		}
 		// 	将容器加入到这个 cgroup 中，即将进程PID加入到cgroup下的 cgroup.procs 文件中
-		err = ioutil.WriteFile(filepath.Join(cgroupMemoryHierarchyMount, "testmemorylimit", "cgroup.procs"),
-			[]byte(strconv.Itoa(cmd.Process.Pid)), 0644)
+		err = os.WriteFile(filepath.Join(cgroupMemoryHierarchyMount, "testmemorylimit", "cgroup.procs"),
+			[]byte(strconv.Itoa(cmd.Process.Pid)), constant.Perm0644)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 		// 	限制进程的内存使用，往 memory.limit_in_bytes 文件中写入数据
-		err = ioutil.WriteFile(filepath.Join(cgroupMemoryHierarchyMount, "testmemorylimit", "memory.limit_in_bytes"),
-			[]byte("100m"), 0644)
+		err = os.WriteFile(filepath.Join(cgroupMemoryHierarchyMount, "testmemorylimit", "memory.limit_in_bytes"),
+			[]byte("100m"), constant.Perm0644)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

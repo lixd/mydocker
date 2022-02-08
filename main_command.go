@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 
+	"mydocker/cgroups/subsystems"
+	"mydocker/container"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"mydocker/container"
 )
 
 var runCommand = cli.Command{
@@ -16,6 +18,18 @@ var runCommand = cli.Command{
 		cli.BoolFlag{
 			Name:  "it", // 简单起见，这里把 -i 和 -t 参数合并成一个
 			Usage: "enable tty",
+		},
+		cli.StringFlag{
+			Name:  "mem", // 限制进程内存使用量，为了避免和 stress 命令的 -m 参数冲突 这里使用 -mem,到时候可以看下解决冲突的方法
+			Usage: "memory limit,e.g.: -mem 100m",
+		},
+		cli.StringFlag{
+			Name:  "cpu",
+			Usage: "cpu quota,e.g.: -cpu 100", // 限制进程 cpu 使用率
+		},
+		cli.StringFlag{
+			Name:  "cpuset",
+			Usage: "cpuset limit,e.g.: -cpuset 2,4", // 限制进程 cpu 使用率
 		},
 	},
 	/*
@@ -28,9 +42,21 @@ var runCommand = cli.Command{
 		if len(context.Args()) < 1 {
 			return fmt.Errorf("missing container command")
 		}
-		cmd := context.Args().Get(0)
+
+		var cmdArray []string
+		for _, arg := range context.Args() {
+			cmdArray = append(cmdArray, arg)
+		}
+
 		tty := context.Bool("it")
-		Run(tty, []string{cmd})
+		resConf := &subsystems.ResourceConfig{
+			MemoryLimit: context.String("mem"),
+			CpuSet:      context.String("cpuset"),
+			CpuCfsQuota: context.Int("cpu"),
+		}
+		log.Info("resConf:", resConf)
+
+		Run(tty, cmdArray, resConf)
 		return nil
 	},
 }
