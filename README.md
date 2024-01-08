@@ -24,3 +24,52 @@
 扫描下面的二维码关注我的微信公众帐号，一起`探索云原生`吧~
 
 ![](https://img.lixueduan.com/about/wechat/qrcode_search.png)
+
+
+## 实现 mydocker run 命令
+搭配 [从零开始写 Docker：实现 run 命令](https://mp.weixin.qq.com/s?__biz=Mzk0NzE5OTQyOQ==&mid=2247484581&idx=1&sn=6474b3a088c9d0e4be6717b668c2b2cc&chksm=c37bc80ff40c4119becc95163201d2646b36eefa6a1010d0b078ab2df258cd56e479bcaedf29#rd) 食用更加~。
+
+---
+
+开发环境如下：
+```bash
+root@mydocker:~# lsb_release -a
+No LSB modules are available.
+Distributor ID:	Ubuntu
+Description:	Ubuntu 20.04.2 LTS
+Release:	20.04
+Codename:	focal
+root@mydocker:~# uname -r
+5.4.0-74-generic
+```
+---
+
+
+测试脚本如下：
+```bash 
+# 克隆代码
+git clone -b feat-run https://github.com/lixd/mydocker.git
+cd mydocker
+# 拉取依赖并编译
+go mod tidy
+go build .
+# 测试
+./mydocker run -it /bin/ls
+```
+
+正常结果
+```bash
+root@mydocker:~/mydocker# ./mydocker run -it /bin/ls
+{"level":"info","msg":"init come on","time":"2024-01-08T09:32:52+08:00"}
+{"level":"info","msg":"command: /bin/ls","time":"2024-01-08T09:32:52+08:00"}
+{"level":"info","msg":"command:/bin/ls","time":"2024-01-08T09:32:52+08:00"}
+LICENSE  Makefile  README.md  container  example  go.mod  go.sum  main.go  main_command.go  mydocker  run.go
+root@mydocker:~/mydocker# ./mydocker run -it /bin/sh
+{"level":"info","msg":"init come on","time":"2024-01-08T09:32:54+08:00"}
+{"level":"info","msg":"command: /bin/sh","time":"2024-01-08T09:32:54+08:00"}
+{"level":"info","msg":"command:/bin/sh","time":"2024-01-08T09:32:54+08:00"}
+# ps -e
+    PID TTY          TIME CMD
+      1 pts/1    00:00:00 sh
+      5 pts/1    00:00:00 ps
+```
