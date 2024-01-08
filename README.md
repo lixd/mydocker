@@ -26,8 +26,8 @@
 ![](https://img.lixueduan.com/about/wechat/qrcode_search.png)
 
 
-## 实现 mydocker run 命令
-搭配 [从零开始写 Docker：实现 run 命令](https://mp.weixin.qq.com/s?__biz=Mzk0NzE5OTQyOQ==&mid=2247484581&idx=1&sn=6474b3a088c9d0e4be6717b668c2b2cc&chksm=c37bc80ff40c4119becc95163201d2646b36eefa6a1010d0b078ab2df258cd56e479bcaedf29#rd) 食用更加~。
+## 优化：使用匿名管道传递参数
+搭配 [从零开始写 Docker(二)---优化：使用匿名管道传递参数]() 食用更加~。
 
 ---
 
@@ -44,11 +44,12 @@ root@mydocker:~# uname -r
 ```
 ---
 
+> 注意：需要使用 root 用户
 
 测试脚本如下：
-```bash 
+```bash
 # 克隆代码
-git clone -b feat-run https://github.com/lixd/mydocker.git
+git clone -b opt-passing-param-by-pipe https://github.com/lixd/mydocker.git
 cd mydocker
 # 拉取依赖并编译
 go mod tidy
