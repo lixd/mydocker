@@ -26,7 +26,7 @@
 ![](https://img.lixueduan.com/about/wechat/qrcode_search.png)
 
 
-## 实现 mydocker run 命令
+## pivotRoot 实现 rootfs 切换
 搭配 [从零开始写 Docker：实现 run 命令](https://mp.weixin.qq.com/s?__biz=Mzk0NzE5OTQyOQ==&mid=2247484581&idx=1&sn=6474b3a088c9d0e4be6717b668c2b2cc&chksm=c37bc80ff40c4119becc95163201d2646b36eefa6a1010d0b078ab2df258cd56e479bcaedf29#rd) 食用更加~。
 
 ---
@@ -48,28 +48,24 @@ root@mydocker:~# uname -r
 测试脚本如下：
 ```bash 
 # 克隆代码
-git clone -b feat-run https://github.com/lixd/mydocker.git
+git clone -b feat-rootfs https://github.com/lixd/mydocker.git
 cd mydocker
 # 拉取依赖并编译
 go mod tidy
 go build .
-# 测试
-./mydocker run -it /bin/ls
+# 测试 查看路径是否变化
+./mydocker run -it  /bin/ls
 ```
 
 正常结果
+> 列出来的是 rootfs 中的文件，而不是宿主机上的
 ```bash
-root@mydocker:~/mydocker# ./mydocker run -it /bin/ls
-{"level":"info","msg":"init come on","time":"2024-01-08T09:32:52+08:00"}
-{"level":"info","msg":"command: /bin/ls","time":"2024-01-08T09:32:52+08:00"}
-{"level":"info","msg":"command:/bin/ls","time":"2024-01-08T09:32:52+08:00"}
-LICENSE  Makefile  README.md  container  example  go.mod  go.sum  main.go  main_command.go  mydocker  run.go
-root@mydocker:~/mydocker# ./mydocker run -it /bin/sh
-{"level":"info","msg":"init come on","time":"2024-01-08T09:32:54+08:00"}
-{"level":"info","msg":"command: /bin/sh","time":"2024-01-08T09:32:54+08:00"}
-{"level":"info","msg":"command:/bin/sh","time":"2024-01-08T09:32:54+08:00"}
-# ps -e
-    PID TTY          TIME CMD
-      1 pts/1    00:00:00 sh
-      5 pts/1    00:00:00 ps
+root@mydocker:~/feat-rootfs/mydocker# go build .
+root@mydocker:~/feat-rootfs/mydocker# ./mydocker run -it  /bin/ls
+{"level":"info","msg":"resConf:\u0026{ 0  }","time":"2024-01-12T16:19:32+08:00"}
+{"level":"info","msg":"command all is /bin/ls","time":"2024-01-12T16:19:32+08:00"}
+{"level":"info","msg":"init come on","time":"2024-01-12T16:19:32+08:00"}
+{"level":"info","msg":"Current location is /root/busybox","time":"2024-01-12T16:19:32+08:00"}
+{"level":"info","msg":"Find path /bin/ls","time":"2024-01-12T16:19:32+08:00"}
+bin   dev   etc   home  proc  root  sys   tmp   usr   var
 ```

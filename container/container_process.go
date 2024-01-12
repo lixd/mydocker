@@ -33,5 +33,7 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File) {
 		cmd.Stderr = os.Stderr
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
+	//指定 cmd 的工作目录为我们前面准备好的用于存放 busybox rootfs的目录，暂时固定为 /root/busybox
+	cmd.Dir = "/root/busybox"
 	return cmd, writePipe
 }
