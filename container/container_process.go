@@ -18,7 +18,7 @@ import (
 3.下面的clone参数就是去fork出来一个新进程，并且使用了namespace隔离新创建的进程和外部环境。
 4.如果用户指定了-it参数，就需要把当前进程的输入输出导入到标准输入输出上
 */
-func NewParentProcess(tty bool) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
 	// 创建匿名管道用于传递参数，将readPipe作为子进程的ExtraFiles，子进程从readPipe中读取参数
 	// 父进程中则通过writePipe将参数写入管道
 	readPipe, writePipe, err := os.Pipe()
@@ -37,16 +37,27 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File) {
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
 	rootPath := "/root"
-	NewWorkSpace(rootPath)
+	NewWorkSpace(rootPath, volume)
 	cmd.Dir = path.Join(rootPath, "merged")
 	return cmd, writePipe
 }
 
 // NewWorkSpace Create an Overlay2 filesystem as container root workspace
-func NewWorkSpace(rootPath string) {
+func NewWorkSpace(rootPath, volume string) {
 	createLower(rootPath)
 	createDirs(rootPath)
 	mountOverlayFS(rootPath)
+
+	// 如果指定了volume则还需要mount volume
+	if volume != "" {
+		mntPath := path.Join(rootPath, "merged")
+		hostPath, containerPath, err := volumeExtract(volume)
+		if err != nil {
+			log.Errorf("extract volume failed，maybe volume parameter input is not correct，detail:%v", err)
+			return
+		}
+		mountVolume(mntPath, hostPath, containerPath)
+	}
 }
 
 // createLower 将busybox作为overlayfs的lower层
@@ -103,9 +114,22 @@ func mountOverlayFS(rootPath string) {
 	}
 }
 
-// DeleteWorkSpace Delete the AUFS filesystem while container exit
-func DeleteWorkSpace(rootPath string) {
-	umountOverlayFS(path.Join(rootPath, "merged"))
+// DeleteWorkSpace Delete the UFS filesystem while container exit
+func DeleteWorkSpace(rootPath, volume string) {
+	mntPath := path.Join(rootPath, "merged")
+
+	// 如果指定了volume则需要umount volume
+	// NOTE: 一定要要先 umount volume ，然后再删除目录，否则由于 bind mount 存在，删除临时目录会导致 volume 目录中的数据丢失。
+	if volume != "" {
+		_, containerPath, err := volumeExtract(volume)
+		if err != nil {
+			log.Errorf("extract volume failed，maybe volume parameter input is not correct，detail:%v", err)
+			return
+		}
+		umountVolume(mntPath, containerPath)
+	}
+
+	umountOverlayFS(mntPath)
 	deleteDirs(rootPath)
 }
 
