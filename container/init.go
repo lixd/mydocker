@@ -54,6 +54,7 @@ func readUserCommand() []string {
 		那么我们的 readPipe 就是 index6,读取时就要像这样：pipe := os.NewFile(uintptr(6), "pipe")
 	*/
 	pipe := os.NewFile(uintptr(fdIndex), "pipe")
+	defer pipe.Close()
 	msg, err := io.ReadAll(pipe)
 	if err != nil {
 		log.Errorf("init read pipe error %v", err)
