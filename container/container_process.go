@@ -137,6 +137,7 @@ func umountOverlayFS(mntPath string) {
 	cmd := exec.Command("umount", mntPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	log.Infof("umountOverlayFS,cmd:%v", cmd.String())
 	if err := cmd.Run(); err != nil {
 		log.Errorf("%v", err)
 	}
