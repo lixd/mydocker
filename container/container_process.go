@@ -10,6 +10,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	RUNNING       = "running"
+	STOP          = "stopped"
+	Exit          = "exited"
+	InfoLoc       = "/var/lib/mydocker/containers/"
+	InfoLocFormat = InfoLoc + "%s/"
+	ConfigName    = "config.json"
+	IDLength      = 10
+)
+
+type Info struct {
+	Pid         string `json:"pid"`        // 容器的init进程在宿主机上的 PID
+	Id          string `json:"id"`         // 容器Id
+	Name        string `json:"name"`       // 容器名
+	Command     string `json:"command"`    // 容器内init运行命令
+	CreatedTime string `json:"createTime"` // 创建时间
+	Status      string `json:"status"`     // 容器的状态
+}
+
 // NewParentProcess 构建 command 用于启动一个新进程
 /*
 这里是父进程，也就是当前进程执行的内容。
