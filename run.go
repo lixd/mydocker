@@ -18,7 +18,8 @@ import (
 func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, containerName string) {
 	containerId := container.GenerateContainerID() // 生成 10 位容器 id
 
-	parent, writePipe := container.NewParentProcess(tty, volume)
+	// start container
+	parent, writePipe := container.NewParentProcess(tty, volume, containerId)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
