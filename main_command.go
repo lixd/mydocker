@@ -149,3 +149,17 @@ var execCommand = cli.Command{
 		return nil
 	},
 }
+
+var stopCommand = cli.Command{
+	Name:  "stop",
+	Usage: "stop a container,e.g. mydocker stop 1234567890",
+	Action: func(context *cli.Context) error {
+		// 期望输入是：mydocker stop 容器Id，如果没有指定参数直接打印错误
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container id")
+		}
+		containerId := context.Args().Get(0)
+		stopContainer(containerId)
+		return nil
+	},
+}
