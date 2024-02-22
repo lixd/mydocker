@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"mydocker/constant"
 	"os"
@@ -14,7 +13,7 @@ import (
 	"time"
 )
 
-func RecordContainerInfo(containerPID int, commandArray []string, containerName, containerId string) error {
+func RecordContainerInfo(containerPID int, commandArray []string, containerName, containerId, volume string) error {
 	// 如果未指定容器名，则使用随机生成的containerID
 	if containerName == "" {
 		containerName = containerId
@@ -27,6 +26,7 @@ func RecordContainerInfo(containerPID int, commandArray []string, containerName,
 		CreatedTime: time.Now().Format("2006-01-02 15:04:05"),
 		Status:      RUNNING,
 		Name:        containerName,
+		Volume:      volume,
 	}
 
 	jsonBytes, err := json.Marshal(containerInfo)
@@ -52,11 +52,12 @@ func RecordContainerInfo(containerPID int, commandArray []string, containerName,
 	return nil
 }
 
-func DeleteContainerInfo(containerID string) {
+func DeleteContainerInfo(containerID string) error {
 	dirPath := fmt.Sprintf(InfoLocFormat, containerID)
 	if err := os.RemoveAll(dirPath); err != nil {
-		log.Errorf("Remove dir %s error %v", dirPath, err)
+		return errors.WithMessagef(err, "remove dir %s failed", dirPath)
 	}
+	return nil
 }
 
 func GenerateContainerID() string {

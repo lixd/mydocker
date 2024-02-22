@@ -15,11 +15,11 @@ import (
 进程，然后在子进程中，调用/proc/self/exe,也就是调用自己，发送init参数，调用我们写的init方法，
 去初始化容器的一些资源。
 */
-func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, containerName string) {
+func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, containerName, imageName string) {
 	containerId := container.GenerateContainerID() // 生成 10 位容器 id
 
 	// start container
-	parent, writePipe := container.NewParentProcess(tty, volume, containerId)
+	parent, writePipe := container.NewParentProcess(tty, volume, containerId, imageName)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -30,7 +30,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, co
 	}
 
 	// record container info
-	err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerId)
+	err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerId, volume)
 	if err != nil {
 		log.Errorf("Record container info error %v", err)
 		return
@@ -46,7 +46,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, co
 	sendInitCommand(comArray, writePipe)
 	if tty { // 如果是tty，那么父进程等待，就是前台运行，否则就是跳过，实现后台运行
 		_ = parent.Wait()
-		container.DeleteWorkSpace("/root/", volume)
+		container.DeleteWorkSpace(containerId, volume)
 		container.DeleteContainerInfo(containerId)
 	}
 }
