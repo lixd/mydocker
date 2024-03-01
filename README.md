@@ -54,7 +54,7 @@ cd mydocker
 go mod tidy
 go build .
 # 测试
-./mydocker run -it /bin/ls
+./mydocker run -it /bin/ls # 需要 root 权限
 ```
 
 正常结果
@@ -73,3 +73,33 @@ root@mydocker:~/mydocker# ./mydocker run -it /bin/sh
       1 pts/1    00:00:00 sh
       5 pts/1    00:00:00 ps
 ```
+
+## 代码分析
+
+mydocker 的代码分为以下几个部分：
+
+```sh
+.
+├── container
+│   ├── container_process.go # 构建容器进程运行参数
+│   └── init.go # 初始化容器进程，并执行容器进程
+├── example
+│   └── main.go # 单独的文件，可编译成独立的可执行文件， 一个 Go 中调用 namespace 和 Cgroups 的例子，不牵涉其他 go 文件
+├── go.mod
+├── go.sum
+├── LICENSE
+├── main_command.go # 命令行解析，包含两个部分 run 和 init
+├── main.go # main 函数入口
+├── Makefile
+├── README.md
+└── run.go # 启动子进程
+```
+
+下面介绍基本的执行流程：
+
+当执行`./mydocker run -it /bin/ls`时，会先执行到 `main_command.go::cli.Command::Action`，在里面会提取出`/bin/ls`命令（被保存在`cmd`变量中），tty变量则是用于确定是否需要打开新终端。
+
+之后会调用`run.go::Run`函数，该函数会调用`container/container_process.go::NewParentProcess`函数，构建子进程运行参数。在构建参数时，会指示创建新的namespaces.
+之后`run.go::Run`函数启动子进程。在`container/container_process.go::NewParentProcess`中构建的子进程参数如下：`/proc/self/exe init /bin/ls`，表示要创建的子进程就是自身，只不过要执行的命令是`init`，参数是`/bin/ls`。
+
+在新创建的子进程中，mydocker会执行到`main_command.go::cli.Command::Action`，这里会调用`container/init.go::RunContainerInitProcess`函数。在该运行函数中，会挂在相应的目录，最后会执行`/bin/ls`命令。
