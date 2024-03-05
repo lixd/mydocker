@@ -18,3 +18,4 @@ go.sum
 *.mmdb
 # ip2region 数据库
 *.db
+dist
