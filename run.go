@@ -5,7 +5,9 @@ import (
 	"mydocker/cgroups"
 	"mydocker/cgroups/subsystems"
 	"mydocker/container"
+	"mydocker/network"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -15,7 +17,8 @@ import (
 进程，然后在子进程中，调用/proc/self/exe,也就是调用自己，发送init参数，调用我们写的init方法，
 去初始化容器的一些资源。
 */
-func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, volume, containerName, imageName string) {
+func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, volume, containerName, imageName string,
+	net string, portMapping []string) {
 	containerId := container.GenerateContainerID() // 生成 10 位容器 id
 
 	// start container
@@ -30,7 +33,7 @@ func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, 
 	}
 
 	// record container info
-	err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerId, volume)
+	_, err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerId, volume, net, portMapping)
 	if err != nil {
 		log.Errorf("Record container info error %v", err)
 		return
@@ -41,6 +44,21 @@ func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, 
 	defer cgroupManager.Destroy()
 	_ = cgroupManager.Set(res)
 	_ = cgroupManager.Apply(parent.Process.Pid, res)
+
+	// 如果指定了网络信息则进行配置
+	if net != "" {
+		// config container network
+		containerInfo := &container.Info{
+			Id:          containerId,
+			Pid:         strconv.Itoa(parent.Process.Pid),
+			Name:        containerName,
+			PortMapping: portMapping,
+		}
+		if _, err := network.Connect(net, containerInfo); err != nil {
+			log.Errorf("Error Connect Network %v", err)
+			return
+		}
+	}
 
 	// 在子进程创建后才能通过pipe来发送参数
 	sendInitCommand(comArray, writePipe)

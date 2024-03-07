@@ -13,43 +13,45 @@ import (
 	"time"
 )
 
-func RecordContainerInfo(containerPID int, commandArray []string, containerName, containerId, volume string) error {
+func RecordContainerInfo(containerPID int, commandArray []string, containerName, containerId, volume, networkName string, portMapping []string) (*Info, error) {
 	// 如果未指定容器名，则使用随机生成的containerID
 	if containerName == "" {
 		containerName = containerId
 	}
 	command := strings.Join(commandArray, "")
 	containerInfo := &Info{
-		Id:          containerId,
 		Pid:         strconv.Itoa(containerPID),
+		Id:          containerId,
+		Name:        containerName,
 		Command:     command,
 		CreatedTime: time.Now().Format("2006-01-02 15:04:05"),
 		Status:      RUNNING,
-		Name:        containerName,
 		Volume:      volume,
+		NetworkName: networkName,
+		PortMapping: portMapping,
 	}
 
 	jsonBytes, err := json.Marshal(containerInfo)
 	if err != nil {
-		return errors.WithMessage(err, "container info marshal failed")
+		return containerInfo, errors.WithMessage(err, "container info marshal failed")
 	}
 	jsonStr := string(jsonBytes)
 	// 拼接出存储容器信息文件的路径，如果目录不存在则级联创建
 	dirPath := fmt.Sprintf(InfoLocFormat, containerId)
 	if err = os.MkdirAll(dirPath, constant.Perm0622); err != nil {
-		return errors.WithMessagef(err, "mkdir %s failed", dirPath)
+		return containerInfo, errors.WithMessagef(err, "mkdir %s failed", dirPath)
 	}
 	// 将容器信息写入文件
 	fileName := path.Join(dirPath, ConfigName)
 	file, err := os.Create(fileName)
 	if err != nil {
-		return errors.WithMessagef(err, "create file %s failed", fileName)
+		return containerInfo, errors.WithMessagef(err, "create file %s failed", fileName)
 	}
 	defer file.Close()
 	if _, err = file.WriteString(jsonStr); err != nil {
-		return errors.WithMessagef(err, "write container info to  file %s failed", fileName)
+		return containerInfo, errors.WithMessagef(err, "write container info to  file %s failed", fileName)
 	}
-	return nil
+	return containerInfo, nil
 }
 
 func DeleteContainerInfo(containerID string) error {
