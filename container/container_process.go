@@ -32,6 +32,7 @@ type Info struct {
 	Volume      string   `json:"volume"`      // 容器挂载的 volume
 	NetworkName string   `json:"networkName"` // 容器所在的网络
 	PortMapping []string `json:"portmapping"` // 端口映射
+	IP          string   `json:"ip"`
 }
 
 // NewParentProcess 构建 command 用于启动一个新进程

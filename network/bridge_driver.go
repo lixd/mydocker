@@ -36,14 +36,23 @@ func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, erro
 }
 
 // Delete 删除网络
-func (d *BridgeNetworkDriver) Delete(name string) error {
-	// 根据名字找到对应的Bridge设备
-	br, err := netlink.LinkByName(name)
+func (d *BridgeNetworkDriver) Delete(network *Network) error {
+	// 清除路由规则
+	err := deleteIPRoute(network.Name, network.IPRange.String())
 	if err != nil {
-		return err
+		return errors.WithMessagef(err, "clean route rule failed after bridge [%s] deleted", network.Name)
 	}
-	// 删除网络对应的 Lin ux Bridge 设备
-	return netlink.LinkDel(br)
+	// 清除 iptables 规则
+	err = deleteIPTables(network.Name, network.IPRange)
+	if err != nil {
+		return errors.WithMessagef(err, "clean snat iptables rule failed after bridge [%s] deleted", network.Name)
+	}
+	// 删除网桥
+	err = d.deleteBridge(network)
+	if err != nil {
+		return errors.WithMessagef(err, "delete bridge [%s] failed", network.Name)
+	}
+	return nil
 }
 
 // Connect 连接一个网络和网络端点
@@ -220,6 +229,40 @@ func setInterfaceIP(name string, rawIP string) error {
 	return netlink.AddrAdd(iface, addr)
 }
 
+// 删除路由，ip addr del xxx命令
+func deleteIPRoute(name string, rawIP string) error {
+	retries := 2
+	var iface netlink.Link
+	var err error
+	for i := 0; i < retries; i++ {
+		// 通过LinkByName方法找到需要设置的网络接口
+		iface, err = netlink.LinkByName(name)
+		if err == nil {
+			break
+		}
+		log.Debugf("error retrieving new bridge netlink link [ %s ]... retrying", name)
+		time.Sleep(2 * time.Second)
+	}
+	if err != nil {
+		return errors.Wrap(err, "abandoning retrieving the new bridge link from netlink, Run [ ip link ] to troubleshoot")
+	}
+	// 查询对应设备的路由并全部删除
+	list, err := netlink.RouteList(iface, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+	for _, route := range list {
+		if route.Dst.String() == rawIP { // 根据子网进行匹配
+			err = netlink.RouteDel(&route)
+			if err != nil {
+				log.Errorf("route [%v] del failed,detail:%v", route, err)
+				continue
+			}
+		}
+	}
+	return nil
+}
+
 // setInterfaceUP 启动Bridge设备
 // 等价于 ip link set xxx up 命令
 func setInterfaceUP(interfaceName string) error {
@@ -238,8 +281,20 @@ func setInterfaceUP(interfaceName string) error {
 // iptables -t nat -A POSTROUTING -s 172.18.0.0/24 -o eth0 -j MASQUERADE
 // iptables -t nat -A POSTROUTING -s {subnet} -o {deviceName} -j MASQUERADE
 func setupIPTables(bridgeName string, subnet *net.IPNet) error {
+	return configIPTables(bridgeName, subnet, false)
+}
+
+func deleteIPTables(bridgeName string, subnet *net.IPNet) error {
+	return configIPTables(bridgeName, subnet, true)
+}
+
+func configIPTables(bridgeName string, subnet *net.IPNet, isDelete bool) error {
+	action := "-A"
+	if isDelete {
+		action = "-D"
+	}
 	// 拼接命令
-	iptablesCmd := fmt.Sprintf("-t nat -A POSTROUTING -s %s ! -o %s -j MASQUERADE", subnet.String(), bridgeName)
+	iptablesCmd := fmt.Sprintf("-t nat %s POSTROUTING -s %s ! -o %s -j MASQUERADE", action, subnet.String(), bridgeName)
 	cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
 	log.Infof("配置 SNAT cmd：%v", cmd.String())
 	// 执行该命令

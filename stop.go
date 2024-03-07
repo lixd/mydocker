@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"mydocker/network"
 	"os"
 	"path"
 	"strconv"
@@ -78,6 +79,12 @@ func removeContainer(containerId string, force bool) {
 			return
 		}
 		container.DeleteWorkSpace(containerId, containerInfo.Volume)
+		if containerInfo.NetworkName != "" { // 清理网络资源
+			if err = network.Disconnect(containerInfo.NetworkName, containerInfo); err != nil {
+				log.Errorf("Remove container [%s]'s config failed, detail: %v", containerId, err)
+				return
+			}
+		}
 	case container.RUNNING: // RUNNING 状态容器如果指定了 force 则先 stop 然后再删除
 		if !force {
 			log.Errorf("Couldn't remove running container [%s], Stop the container before attempting removal or"+

@@ -23,7 +23,7 @@ type Endpoint struct {
 type Driver interface {
 	Name() string
 	Create(subnet string, name string) (*Network, error)
-	Delete(name string) error
+	Delete(network *Network) error
 	Connect(networkName string, endpoint *Endpoint) error // 内部会修改 endpoint.Device，必修传指针
 	Disconnect(endpointID string) error
 }

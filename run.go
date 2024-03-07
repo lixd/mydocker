@@ -32,19 +32,13 @@ func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, 
 		return
 	}
 
-	// record container info
-	_, err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerId, volume, net, portMapping)
-	if err != nil {
-		log.Errorf("Record container info error %v", err)
-		return
-	}
-
 	// 创建cgroup manager, 并通过调用set和apply设置资源限制并使限制在容器上生效
 	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
 	defer cgroupManager.Destroy()
 	_ = cgroupManager.Set(res)
 	_ = cgroupManager.Apply(parent.Process.Pid, res)
 
+	var containerIP string
 	// 如果指定了网络信息则进行配置
 	if net != "" {
 		// config container network
@@ -54,10 +48,20 @@ func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, 
 			Name:        containerName,
 			PortMapping: portMapping,
 		}
-		if _, err := network.Connect(net, containerInfo); err != nil {
+		ip, err := network.Connect(net, containerInfo)
+		if err != nil {
 			log.Errorf("Error Connect Network %v", err)
 			return
 		}
+		containerIP = ip.String()
+	}
+
+	// record container info
+	containerInfo, err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerId,
+		volume, net, containerIP, portMapping)
+	if err != nil {
+		log.Errorf("Record container info error %v", err)
+		return
 	}
 
 	// 在子进程创建后才能通过pipe来发送参数
@@ -66,6 +70,9 @@ func Run(tty bool, comArray, envSlice []string, res *subsystems.ResourceConfig, 
 		_ = parent.Wait()
 		container.DeleteWorkSpace(containerId, volume)
 		container.DeleteContainerInfo(containerId)
+		if net != "" {
+			network.Disconnect(net, containerInfo)
+		}
 	}
 }
 
