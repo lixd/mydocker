@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"mydocker/cgroups/resource"
 	"mydocker/network"
 	"os"
 
-	"mydocker/cgroups/subsystems"
 	"mydocker/container"
 
 	log "github.com/sirupsen/logrus"
@@ -90,7 +90,7 @@ var runCommand = cli.Command{
 			tty = true
 		}
 		log.Infof("createTty %v", tty)
-		resConf := &subsystems.ResourceConfig{
+		resConf := &resource.ResourceConfig{
 			MemoryLimit: context.String("mem"),
 			CpuSet:      context.String("cpuset"),
 			CpuCfsQuota: context.Int("cpu"),

@@ -1,7 +1,8 @@
-package subsystems
+package fs
 
 import (
 	"fmt"
+	"mydocker/cgroups/resource"
 	"os"
 	"path"
 	"strconv"
@@ -21,21 +22,14 @@ func (s *CpuSubSystem) Name() string {
 	return "cpu"
 }
 
-func (s *CpuSubSystem) Set(cgroupPath string, res *ResourceConfig) error {
-	if res.CpuCfsQuota == 0 && res.CpuShare == "" {
+func (s *CpuSubSystem) Set(cgroupPath string, res *resource.ResourceConfig) error {
+	if res.CpuCfsQuota == 0 {
 		return nil
 	}
 	subsysCgroupPath, err := getCgroupPath(s.Name(), cgroupPath, true)
 	if err != nil {
 		return err
 	}
-	// cpu.shares 控制的是CPU使用比例，不是绝对值
-	if res.CpuShare != "" {
-		if err = os.WriteFile(path.Join(subsysCgroupPath, "cpu.shares"), []byte(res.CpuShare), constant.Perm0644); err != nil {
-			return fmt.Errorf("set cgroup cpu share fail %v", err)
-		}
-	}
-
 	// cpu.cfs_period_us & cpu.cfs_quota_us 控制的是CPU使用时间，单位是微秒，比如每1秒钟，这个进程只能使用200ms，相当于只能用20%的CPU
 	if res.CpuCfsQuota != 0 {
 		// cpu.cfs_period_us 默认为100000，即100ms
@@ -51,11 +45,7 @@ func (s *CpuSubSystem) Set(cgroupPath string, res *ResourceConfig) error {
 	return nil
 }
 
-func (s *CpuSubSystem) Apply(cgroupPath string, pid int, res *ResourceConfig) error {
-	if res.CpuCfsQuota == 0 && res.CpuShare == "" {
-		return nil
-	}
-
+func (s *CpuSubSystem) Apply(cgroupPath string, pid int) error {
 	subsysCgroupPath, err := getCgroupPath(s.Name(), cgroupPath, false)
 	if err != nil {
 		return fmt.Errorf("get cgroup %s error: %v", cgroupPath, err)

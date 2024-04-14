@@ -1,7 +1,8 @@
-package subsystems
+package fs
 
 import (
 	"fmt"
+	"mydocker/cgroups/resource"
 	"os"
 	"path"
 	"strconv"
@@ -18,7 +19,7 @@ func (s *CpusetSubSystem) Name() string {
 	return "cpuset"
 }
 
-func (s *CpusetSubSystem) Set(cgroupPath string, res *ResourceConfig) error {
+func (s *CpusetSubSystem) Set(cgroupPath string, res *resource.ResourceConfig) error {
 	if res.CpuSet == "" {
 		return nil
 	}
@@ -32,11 +33,8 @@ func (s *CpusetSubSystem) Set(cgroupPath string, res *ResourceConfig) error {
 	return nil
 }
 
-func (s *CpusetSubSystem) Apply(cgroupPath string, pid int, res *ResourceConfig) error {
-	if res.CpuSet == "" {
-		return nil
-	}
-	subsysCgroupPath, err := getCgroupPath(s.Name(), cgroupPath, false)
+func (s *CpusetSubSystem) Apply(cgroupPath string, pid int) error {
+	subsysCgroupPath, err := getCgroupPath(s.Name(), cgroupPath, true)
 	if err != nil {
 		return errors.Wrapf(err, "get cgroup %s", cgroupPath)
 
