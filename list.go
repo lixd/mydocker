@@ -39,8 +39,8 @@ func ListContainers() {
 		_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			item.Id,
 			item.Name,
-			item.IP,
 			item.Pid,
+			item.IP,
 			item.Status,
 			item.Command,
 			item.CreatedTime)
