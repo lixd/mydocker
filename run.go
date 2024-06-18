@@ -34,7 +34,7 @@ func Run(tty bool, comArray, envSlice []string, res *resource.ResourceConfig, vo
 
 	// 创建cgroup manager, 并通过调用set和apply设置资源限制并使限制在容器上生效
 	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
-	defer cgroupManager.Destroy()
+	//defer cgroupManager.Destroy() // 由单独的 goroutine 来处理
 	_ = cgroupManager.Set(res)
 	_ = cgroupManager.Apply(parent.Process.Pid)
 
@@ -66,13 +66,27 @@ func Run(tty bool, comArray, envSlice []string, res *resource.ResourceConfig, vo
 
 	// 在子进程创建后才能通过pipe来发送参数
 	sendInitCommand(comArray, writePipe)
-	if tty { // 如果是tty，那么父进程等待，就是前台运行，否则就是跳过，实现后台运行
-		_ = parent.Wait()
+
+	// 然后创建一个 goroutine 来处理后台运行的清理工作
+	go func() {
+		if !tty {
+			// 等待子进程退出
+			_, _ = parent.Process.Wait()
+		}
+
+		// 清理工作
 		container.DeleteWorkSpace(containerId, volume)
 		container.DeleteContainerInfo(containerId)
 		if net != "" {
 			network.Disconnect(net, containerInfo)
 		}
+
+		// 销毁 cgroup
+		cgroupManager.Destroy()
+	}()
+
+	if tty {
+		_ = parent.Wait() // 前台运行，等待容器进程结束
 	}
 }
 
